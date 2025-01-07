@@ -5,9 +5,9 @@ module.exports = async (req, res, next) => {
     try {
         const token = req.headers.authorization.split(' ')[1]; 
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-        const id_user = decodedToken.utilisateurId
+        const id = decodedToken.utilisateurId
         
-        if(parseInt(req.params.id) && parseInt(req.params.id) !== id_user ){
+        if(parseInt(req.body.id) && parseInt(req.body.id) !== parseInt(id) ){
             throw 'User id non valide ! '   
         } else {  
             next()

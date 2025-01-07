@@ -15,8 +15,12 @@ connectDB();
 app.use('/api/utilisateurs', utilisateurRoutes);
 app.use('/api/abonnements', abonnementRoutes);
 
+// Route de test
+app.get('/', (req, res) => {
+  res.send('Hello from Express!');
+});
 // Démarrage du serveur
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
 });

@@ -8,13 +8,14 @@
     ],
     "routes": [
       {
-        "src": "/*", 
-        "dest": "server.js"
+        "src": "/(.*)",
+        "dest": "/server.js"
       }
     ],
-    "env": {
-      "DB_URL": "@mongo_uri", 
-      "JWT_SECRET": "@jwt_secret"
-    }
-}
+       "env": {
+        "DB_URL": "DB_URL", 
+        "JWT_SECRET": "JWT_SECRET"
+      }
+  }
+    
   

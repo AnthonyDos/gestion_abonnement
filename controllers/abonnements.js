@@ -1,6 +1,10 @@
 const Abonnement = require('../models/abonnementSchema.js');
 const moment = require('moment'); 
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const Utilisateur = require('../models/utilisateurSchema.js');
 
+// Récupérer tous les abonnements
 exports.recupererAbonnements = async (req, res) => {
     try {
         const abonnements = await Abonnement.find();
@@ -51,8 +55,7 @@ exports.recupererAbonnementParId = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const abonnement = await Abonnement.findById(id);
-
+        const abonnement = await Abonnement.findOne({id: parseInt(id)});
         if (!abonnement) {
             return res.status(404).json({ error: "Abonnement non trouvé!" });
         }
@@ -79,10 +82,9 @@ exports.recupererAbonnementParId = async (req, res) => {
 };
 
 exports.ajouterAbonnement = async (req, res) => {
-    const { utilisateur_id, nom_service, date_debut, duree, montant } = req.body;
-    console.log('Route POST /api/abonnements appelée avec :', req.body);
+    const { id, nom_service, date_debut, duree, montant } = req.body;
 
-    if (!utilisateur_id || !nom_service || !date_debut || !montant || !duree) {
+    if (!id || !nom_service || !date_debut || !montant || !duree) {
         return res.status(400).json({ error: 'Tous les champs doivent être renseignés.' });
     }
 
@@ -98,11 +100,11 @@ exports.ajouterAbonnement = async (req, res) => {
 
     const dernierAbonnement = await Abonnement.findOne().sort({ id: -1 });  
     const nouvelId = dernierAbonnement ? dernierAbonnement.id + 1 : 1;
-    console.log(utilisateur_id)
+
     try {
         const abonnement = new Abonnement({
             id: nouvelId,
-            utilisateur_id,
+            utilisateur_id: id,
             nom_service,
             date_debut,
             date_fin,
@@ -188,3 +190,37 @@ exports.supprimerAbonnement = async (req, res) => {
       res.status(500).json({ error: 'Erreur interne du serveur.', cause: err.message });
     }
   };
+
+  // Générer un pdf
+  exports.generationPdf= async(req, res) => {
+    const id = req.params.id || req.body.id;
+    const abonnement = await Abonnement.findOne({id: parseInt(id)});
+    const utilisateur = await Utilisateur.findById(req.params.id);    
+    const doc = new PDFDocument();
+    doc.fontSize(18).text('CONTRAT D\'ABONNEMENT', { align: 'center' }).moveDown(1);
+
+    // Ajout du texte du contrat
+    doc.fontSize(12).text('Entre les soussignés :\n\n');
+    doc.text(`La société ${abonnement.nom_service}\nAdresse : [Adresse de la société]\n.`);
+    doc.text('Et\n\n');
+    doc.text(`Le client ${utilisateur.nom}\nAdresse : [Adresse du client]\nEmail : ${utilisateur.email}\nTéléphone : [Numéro de téléphone du client]\n\n`);
+    doc.text('1. Objet du contrat\nLe présent contrat a pour objet l’abonnement aux services de [Nom du service], fournis par [Nom de la société].\n\n');
+    doc.text('2. Date de souscription\nLa date de souscription au service est fixée au : [Date de souscription]\n\n');
+    doc.text('3. Durée de l\'abonnement\nLe présent abonnement est conclu pour une durée de [Durée du contrat en mois] mois, à compter de la date de souscription.\n\n');
+    doc.text('4. Date de fin d\'engagement\nLa fin d\'engagement de l\'abonnement est prévue pour le : [Date de fin d\'engagement]\n\n');
+    doc.text('5. Prix et conditions de paiement\nLe prix mensuel de l\'abonnement est fixé à : [Prix mensuel en €] € par mois.\nLe paiement sera effectué mensuellement, au début de chaque période de facturation.\n\n');
+    doc.text('6. Conditions générales\nLes conditions générales des services fournis sont disponibles à l\'adresse suivante : [URL des conditions générales]\n\n');
+    doc.text('7. Résiliation\nLe client peut résilier son abonnement à tout moment avant la fin de la période d\'engagement en suivant les procédures de résiliation décrites dans les conditions générales.\n\n');
+
+    // Ajouter la signature et le lieu
+    doc.text('Fait à [Lieu], le [Date]\n\n');
+    doc.text('Signature de la société\n[Nom du représentant]\n[Poste du représentant]\n[Signature de la société]\n\n');
+    doc.text('Signature du client\n[Nom du client]\n[Signature du client]\n');
+
+    // Envoi du PDF à l'utilisateur
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename=contrat_abonnement.pdf');
+    doc.pipe(res);
+
+    doc.end();
+} 

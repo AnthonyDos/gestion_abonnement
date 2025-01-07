@@ -9,7 +9,7 @@ router.get('/', auth, controller.recupererAbonnements);
 // Récupérer tous les abonnements d'un utilisateur
 router.get('/utilisateur/:id', auth, controller.recupererTousLesAbonnementsUtilisateur);
 
-// Récupérer tous les abonnements
+// Récupérer un abonnement par son id
 router.get('/:id', auth, controller.recupererAbonnementParId);
 
 // Ajouter un abonnement
@@ -20,6 +20,9 @@ router.put('/:id', auth, controller.mettreAJourAbonnement);
 
 // Suppression
 router.delete('/:id', auth, controller.supprimerAbonnement);
+
+//Génération pdf
+router.get("/:id/document/generer-pdf", controller.generationPdf);
 
 module.exports = router; 
 
