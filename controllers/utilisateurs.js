@@ -12,14 +12,16 @@ exports.recupererUtilisateurs = async (req, res) => {
 };
 
 exports.inscriptionUtilisateur = async (req, res) => {
-  const { nom, prenom, email, motDePasse } = req.body;
-
+  const champsObligatoires = ['civilite', 'nom', 'prenom', 'email', 'motDePasse', 'ville', 'codePostal', 'telephone'];
+  
   try {
-    if (!nom || !prenom || !email || !motDePasse) {
-      return res.status(400).json({ error: 'Tous les champs doivent être renseignés.' });
+    for (const champ of champsObligatoires) {
+      if (!req.body[champ]) {
+        return res.status(400).json({ error: `Le champ ${champ} est obligatoire.` });
+      }
     }
-
-    const utilisateurExistant = await Utilisateur.findOne({ email });
+    const email = req.body.email;
+    const utilisateurExistant = await Utilisateur.findOne({email});
     if (utilisateurExistant) {
       return res.status(409).json({ error: 'Un utilisateur avec cet email existe déjà.' });
     }
@@ -28,7 +30,7 @@ exports.inscriptionUtilisateur = async (req, res) => {
     const nouvelId = dernierUtilisateur ? dernierUtilisateur._id + 1 : 1; 
 
     const salt = await bcrypt.genSalt(10); 
-    const motDePasseCrypte = await bcrypt.hash(motDePasse, salt); 
+    const motDePasseCrypte = await bcrypt.hash(req.body.motDePasse, salt); 
     const payload = {
       utilisateurId: nouvelId,
       email: email,
@@ -37,10 +39,15 @@ exports.inscriptionUtilisateur = async (req, res) => {
 
     const nouvelUtilisateur = new Utilisateur({
       _id: nouvelId, 
-      nom,
-      prenom,
+      civilite: req.body.civilite,
+      nom:req.body.nom,
+      prenom: req.body.prenom,
       email,
-      motDePasse: motDePasseCrypte
+      motDePasse: motDePasseCrypte,
+      adresse: req.body.adresse,
+      ville: req.body.ville,
+      codePostal: req.body.codePostal,
+      telephone: req.body.telephone
     });
 
     await nouvelUtilisateur.save();

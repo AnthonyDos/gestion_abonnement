@@ -82,20 +82,23 @@ exports.recupererAbonnementParId = async (req, res) => {
 };
 
 exports.ajouterAbonnement = async (req, res) => {
-    const { id, nom_service, date_debut, duree, montant } = req.body;
+    const champsObligatoires = req.body;
+    const tableauChamps = [champsObligatoires];
+        console.log(tableauChamps)
+    for (const champ of tableauChamps) {
+        if (![champ]) {
+          return res.status(400).json({ error: `Le champ ${champ} est obligatoire.` });
+        }
+      }
 
-    if (!id || !nom_service || !date_debut || !montant || !duree) {
-        return res.status(400).json({ error: 'Tous les champs doivent être renseignés.' });
-    }
-
-    if (isNaN(duree)) {
+    if (isNaN(req.body.duree)) {
         return res.status(400).json({ error: 'La durée doit être un nombre valide.' });
     }
     
     const dateDuJour = new Date();
     let date_fin;
-    if (duree) {
-        date_fin = moment(dateDuJour).add(duree, 'months').toDate();  
+    if (req.body.duree) {
+        date_fin = moment(dateDuJour).add(req.body.duree, 'months').toDate();  
     }
 
     const dernierAbonnement = await Abonnement.findOne().sort({ id: -1 });  
@@ -104,12 +107,18 @@ exports.ajouterAbonnement = async (req, res) => {
     try {
         const abonnement = new Abonnement({
             id: nouvelId,
-            utilisateur_id: id,
-            nom_service,
-            date_debut,
-            date_fin,
-            montant,
-            duree,
+            utilisateur_id: req.body.utilisateur_id,
+            nom_service: req.body.nom_service,
+            date_debut: req.body.date_debut,
+            date_fin: req.body.date_fin,
+            montant: req.body.montant,
+            duree: req.body.duree,
+            adresse: req.body.adresse,
+            ville: req.body.ville,
+            codePostal: req.body.codePostal,
+            telephone: req.body.telephone,
+            numeroClient: req.body.numeroClient,
+            expirationDans: req.body.expirationDans,
             statut: 'actif'
         });
 
@@ -198,24 +207,51 @@ exports.supprimerAbonnement = async (req, res) => {
     const utilisateur = await Utilisateur.findById(req.params.id);    
     const doc = new PDFDocument();
     doc.fontSize(18).text('CONTRAT D\'ABONNEMENT', { align: 'center' }).moveDown(1);
+    
+    const leftColumnX = 50; 
+    const rightColumnX = 300;
+    const startY = doc.y; 
 
-    // Ajout du texte du contrat
-    doc.fontSize(12).text('Entre les soussignés :\n\n');
-    doc.text(`La société ${abonnement.nom_service}\nAdresse : [Adresse de la société]\n.`);
-    doc.text('Et\n\n');
-    doc.text(`Le client ${utilisateur.nom}\nAdresse : [Adresse du client]\nEmail : ${utilisateur.email}\nTéléphone : [Numéro de téléphone du client]\n\n`);
-    doc.text('1. Objet du contrat\nLe présent contrat a pour objet l’abonnement aux services de [Nom du service], fournis par [Nom de la société].\n\n');
-    doc.text('2. Date de souscription\nLa date de souscription au service est fixée au : [Date de souscription]\n\n');
-    doc.text('3. Durée de l\'abonnement\nLe présent abonnement est conclu pour une durée de [Durée du contrat en mois] mois, à compter de la date de souscription.\n\n');
-    doc.text('4. Date de fin d\'engagement\nLa fin d\'engagement de l\'abonnement est prévue pour le : [Date de fin d\'engagement]\n\n');
-    doc.text('5. Prix et conditions de paiement\nLe prix mensuel de l\'abonnement est fixé à : [Prix mensuel en €] € par mois.\nLe paiement sera effectué mensuellement, au début de chaque période de facturation.\n\n');
-    doc.text('6. Conditions générales\nLes conditions générales des services fournis sont disponibles à l\'adresse suivante : [URL des conditions générales]\n\n');
-    doc.text('7. Résiliation\nLe client peut résilier son abonnement à tout moment avant la fin de la période d\'engagement en suivant les procédures de résiliation décrites dans les conditions générales.\n\n');
+    doc.fontSize(12).text(
+        `Le client :\n${utilisateur.civilite} ${utilisateur.nom} ${utilisateur.prenom}\nAdresse : ${utilisateur.adresse}\nEmail : ${utilisateur.email}\nTéléphone : ${utilisateur.telephone}\n\n`,
+        leftColumnX,
+        startY
+    );
+
+    doc.fontSize(12).text(
+        `La société :\n${abonnement.nom_service}\nAdresse : ${abonnement.adresse}\n${abonnement.codePostal} ${abonnement.adresse}\nTéléphone : ${abonnement.telephone}\n\n`,
+        rightColumnX,
+        startY
+    );
+
+    doc.moveDown(2); 
+    doc.x = 50; 
+
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    const dateDebut = new Intl.DateTimeFormat('fr-FR', options).format(abonnement.date_debut);
+    const dateFin = new Intl.DateTimeFormat('fr-FR', options).format(abonnement.date_fin);
+
+    doc.fontSize(12).text(`Conditions du contrat\n\n`);
+
+    // Contenu du contrat
+    doc.fontSize(11).text(`1. Objet du contrat\nLe présent contrat a pour objet l’abonnement aux services de ${abonnement.nom_service}, fournis par Subscr.\n\n`);
+    doc.fontSize(11).text(`2. Date de souscription\nLa date de souscription au service est fixée au : ${dateDebut}\n\n`);
+    doc.fontSize(11).text(`3. Durée de l'abonnement\nLe présent abonnement est conclu pour une durée de ${abonnement.duree} mois, à compter de la date de souscription.\n\n`);
+    doc.fontSize(11).text(`4. Date de fin d'engagement\nLa fin d'engagement de l'abonnement est prévue pour le : ${dateFin}\n\n`);
+    doc.fontSize(11).text(`5. Prix et conditions de paiement\nLe prix mensuel de l'abonnement est fixé à : ${abonnement.montant} € par mois.Le paiement sera effectué mensuellement, au début de chaque période de facturation.\n\n`);
+    doc.fontSize(11).text('6. Conditions générales\nLes conditions générales des services fournis sont disponibles à l\'adresse suivante : des conditions générales\n\n');
+    doc.fontSize(11).text('7. Résiliation\nLe client peut résilier son abonnement à tout moment avant la fin de la période d\'engagement en suivant les procédures de résiliation décrites dans les conditions générales.\n\n');
 
     // Ajouter la signature et le lieu
-    doc.text('Fait à [Lieu], le [Date]\n\n');
-    doc.text('Signature de la société\n[Nom du représentant]\n[Poste du représentant]\n[Signature de la société]\n\n');
-    doc.text('Signature du client\n[Nom du client]\n[Signature du client]\n');
+    const dateDuJour = new Date();
+    const dateEnLettres = new Intl.DateTimeFormat('fr-FR', options).format(dateDuJour);
+
+    doc.text(`Fait à ${utilisateur.ville}, le ${dateEnLettres}\n\n`);
+
+    // Signatures face à face
+    const signatureStartY = doc.y; 
+    doc.fontSize(11).text(`Signature du client :\n${utilisateur.civilite} ${utilisateur.nom} ${utilisateur.prenom}`, leftColumnX, signatureStartY);
+    doc.fontSize(11).text('Signature de la société :\n Subscr\n Directeur général\n M. Dupont Jean', rightColumnX, signatureStartY);
 
     // Envoi du PDF à l'utilisateur
     res.setHeader('Content-Type', 'application/pdf');
