@@ -213,13 +213,13 @@ exports.supprimerAbonnement = async (req, res) => {
     const startY = doc.y; 
 
     doc.fontSize(12).text(
-        `Le client :\n${utilisateur.civilite} ${utilisateur.nom} ${utilisateur.prenom}\nAdresse : ${utilisateur.adresse}\nEmail : ${utilisateur.email}\nTéléphone : ${utilisateur.telephone}\n\n`,
+        `Le client :\n${utilisateur.civilite} ${utilisateur.nom} ${utilisateur.prenom}\nAdresse : ${utilisateur.adresse}\n${utilisateur.codePostal} ${utilisateur.ville}\nEmail : ${utilisateur.email}\nTéléphone : ${utilisateur.telephone}\n\n`,
         leftColumnX,
         startY
     );
 
     doc.fontSize(12).text(
-        `La société :\n${abonnement.nom_service}\nAdresse : ${abonnement.adresse}\n${abonnement.codePostal} ${abonnement.adresse}\nTéléphone : ${abonnement.telephone}\n\n`,
+        `La société :\n${abonnement.nom_service}\nAdresse : ${abonnement.adresse}\n${abonnement.codePostal} ${abonnement.ville}\nTéléphone : ${abonnement.telephone}\n\n`,
         rightColumnX,
         startY
     );
@@ -246,12 +246,32 @@ exports.supprimerAbonnement = async (req, res) => {
     const dateDuJour = new Date();
     const dateEnLettres = new Intl.DateTimeFormat('fr-FR', options).format(dateDuJour);
 
-    doc.text(`Fait à ${utilisateur.ville}, le ${dateEnLettres}\n\n`);
+    // Signatures 
+    const columnWidth = 200; 
+    const signatureStartY = doc.y;
 
-    // Signatures face à face
-    const signatureStartY = doc.y; 
-    doc.fontSize(11).text(`Signature du client :\n${utilisateur.civilite} ${utilisateur.nom} ${utilisateur.prenom}`, leftColumnX, signatureStartY);
-    doc.fontSize(11).text('Signature de la société :\n Subscr\n Directeur général\n M. Dupont Jean', rightColumnX, signatureStartY);
+    doc.text(`Fait à ${utilisateur.ville}, le ${dateEnLettres}`, leftColumnX, signatureStartY, {
+        width: columnWidth,
+        align: 'left', 
+    });
+
+    doc.text(`Fait à ${abonnement.ville}, le ${dateEnLettres}`, rightColumnX, signatureStartY, {
+        width: columnWidth,
+        align: 'left', 
+    });
+
+    doc.moveDown(2);
+    const signatureY = doc.y;
+
+    doc.fontSize(11).text(`Signature du client :\n${utilisateur.civilite} ${utilisateur.nom} ${utilisateur.prenom}`, leftColumnX, signatureY, {
+        width: columnWidth,
+        align: 'left',
+    });
+
+    doc.fontSize(11).text('Signature de la société :\n Subscr\n Directeur général\n M. Dupont Jean', rightColumnX, signatureY, {
+        width: columnWidth,
+        align: 'left',
+    });
 
     // Envoi du PDF à l'utilisateur
     res.setHeader('Content-Type', 'application/pdf');
