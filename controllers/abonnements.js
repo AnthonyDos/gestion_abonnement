@@ -15,6 +15,21 @@ exports.recupererAbonnements = async (req, res) => {
             if (!abonnement.date_fin || abonnement.date_fin > maintenant) {
                 statut = "actif";
             }
+            const startDate = new Date();
+            const endDate = new Date(abonnement.date_fin);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+
+            if (isNaN(startDate) || isNaN(endDate)) {
+                return res.status(400).send("Les dates fournies ne sont pas valides.");
+            }
+            const diffInMilliseconds = endDate - startDate;
+            
+            // Calcul de la différence en jours
+            const differenceEnJour = diffInMilliseconds / (1000 * 60 * 60 * 24);
+            const differenceEnJourCorrect = Math.floor(differenceEnJour);
+
+            abonnement.expirationDans = differenceEnJourCorrect;
              abonnement.statut = statut;
              abonnement.save();    
             return {
@@ -37,6 +52,21 @@ exports.recupererTousLesAbonnementsUtilisateur = async (req, res) => {
             if (!abonnement.date_fin || abonnement.date_fin > maintenant) {
                 statut = "actif";
             }
+            const startDate = new Date();
+            const endDate = new Date(abonnement.date_fin);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+
+            if (isNaN(startDate) || isNaN(endDate)) {
+                return res.status(400).send("Les dates fournies ne sont pas valides.");
+            }
+            const diffInMilliseconds = endDate - startDate;
+            
+            // Calcul de la différence en jours
+            const differenceEnJour = diffInMilliseconds / (1000 * 60 * 60 * 24);
+            const differenceEnJourCorrect = Math.floor(differenceEnJour);
+
+            abonnement.expirationDans = differenceEnJourCorrect;
             abonnement.statut = statut;
             abonnement.save();    
             
@@ -65,7 +95,21 @@ exports.recupererAbonnementParId = async (req, res) => {
         if (!abonnement.date_fin || abonnement.date_fin > maintenant) {
             statut = "actif";
         }
+        const startDate = new Date();
+        const endDate = new Date(abonnement.date_fin);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
 
+        if (isNaN(startDate) || isNaN(endDate)) {
+            return res.status(400).send("Les dates fournies ne sont pas valides.");
+        }
+        const diffInMilliseconds = endDate - startDate;
+        
+        // Calcul de la différence en jours
+        const differenceEnJour = diffInMilliseconds / (1000 * 60 * 60 * 24);
+        const differenceEnJourCorrect = Math.floor(differenceEnJour);
+
+        abonnement.expirationDans = differenceEnJourCorrect;
         abonnement.statut = statut;
 
         await abonnement.save();
@@ -84,26 +128,34 @@ exports.recupererAbonnementParId = async (req, res) => {
 exports.ajouterAbonnement = async (req, res) => {
     const champsObligatoires = req.body;
     const tableauChamps = [champsObligatoires];
-        console.log(tableauChamps)
+
     for (const champ of tableauChamps) {
         if (![champ]) {
           return res.status(400).json({ error: `Le champ ${champ} est obligatoire.` });
         }
-      }
+    }
+
+    const startDate = new Date();
+    const endDate = new Date(req.body.date_fin);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+
+    if (isNaN(startDate) || isNaN(endDate)) {
+        return res.status(400).send("Les dates fournies ne sont pas valides.");
+    }
+    const diffInMilliseconds = endDate - startDate;
+    
+    // Calcul de la différence en jours
+    const differenceEnJour = diffInMilliseconds / (1000 * 60 * 60 * 24);
+    const differenceEnJourCorrect = Math.floor(differenceEnJour);
 
     if (isNaN(req.body.duree)) {
         return res.status(400).json({ error: 'La durée doit être un nombre valide.' });
     }
-    
-    const dateDuJour = new Date();
-    let date_fin;
-    if (req.body.duree) {
-        date_fin = moment(dateDuJour).add(req.body.duree, 'months').toDate();  
-    }
 
     const dernierAbonnement = await Abonnement.findOne().sort({ id: -1 });  
     const nouvelId = dernierAbonnement ? dernierAbonnement.id + 1 : 1;
-
+    
     try {
         const abonnement = new Abonnement({
             id: nouvelId,
@@ -118,7 +170,7 @@ exports.ajouterAbonnement = async (req, res) => {
             codePostal: req.body.codePostal,
             telephone: req.body.telephone,
             numeroClient: req.body.numeroClient,
-            expirationDans: req.body.expirationDans,
+            expirationDans: differenceEnJourCorrect,
             statut: 'actif'
         });
 
@@ -145,6 +197,20 @@ exports.mettreAJourStatutAbonnement = async (req, res) => {
         if (!abonnement.date_fin || abonnement.date_fin > maintenant) {
             statut = "actif";
         }
+        const endDate = new Date(abonnement.date_fin);
+        maintenant.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        if (isNaN(maintenant) || isNaN(endDate)) {
+            return res.status(400).send("Les dates fournies ne sont pas valides.");
+        }
+        const diffInMilliseconds = endDate - maintenant;
+        
+        // Calcul de la différence en jours
+        const differenceEnJour = diffInMilliseconds / (1000 * 60 * 60 * 24);
+        const differenceEnJourCorrect = Math.floor(differenceEnJour);
+
+        abonnement.expirationDans = differenceEnJourCorrect;
         abonnement.statut = statut;
         await abonnement.save();
 
@@ -162,26 +228,41 @@ exports.mettreAJourAbonnement = async (req, res) => {
     const { type, date_debut, date_fin, statut } = req.body;  
   
     try {
-      const abonnement = await Abonnement.findById(id);
-      if (!abonnement) {
-        return res.status(404).json({ error: 'Abonnement non trouvé.' });
-      }
-  
-      abonnement.type = type || abonnement.type;  
-      abonnement.date_debut = date_debut || abonnement.date_debut;
-      abonnement.date_fin = date_fin || abonnement.date_fin;
-      abonnement.statut = statut || abonnement.statut;
-  
-      await abonnement.save();
-  
-      res.status(200).json({
-        message: 'Abonnement mis à jour avec succès.',
-        abonnement
-      });
+        const abonnement = await Abonnement.findById(id);
+        if (!abonnement) {
+            return res.status(404).json({ error: 'Abonnement non trouvé.' });
+        }
+    
+        abonnement.type = type || abonnement.type;  
+        abonnement.date_debut = date_debut || abonnement.date_debut;
+        abonnement.date_fin = date_fin || abonnement.date_fin;
+        abonnement.statut = statut || abonnement.statut;
+    
+        const maintenant = new Date();
+        const endDate = new Date(abonnement.date_fin);
+        maintenant.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        if (isNaN(maintenant) || isNaN(endDate)) {
+            return res.status(400).send("Les dates fournies ne sont pas valides.");
+        }
+        const diffInMilliseconds = endDate - maintenant;
+        
+        // Calcul de la différence en jours
+        const differenceEnJour = diffInMilliseconds / (1000 * 60 * 60 * 24);
+        const differenceEnJourCorrect = Math.floor(differenceEnJour);
+
+        abonnement.expirationDans = differenceEnJourCorrect;
+        await abonnement.save();
+    
+        res.status(200).json({
+            message: 'Abonnement mis à jour avec succès.',
+            abonnement
+        });
     } catch (err) {
-      res.status(500).json({ error: 'Erreur interne du serveur.', cause: err.message });
+        res.status(500).json({ error: 'Erreur interne du serveur.', cause: err.message });
     }
-  };
+};
 
 // Suppression abonnement
 exports.supprimerAbonnement = async (req, res) => {
